@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from database import db, now
 from catalog import TOKENS, DISTRICTS
+from ecosystem import visible_query,registry_ids
 
 router = APIRouter()
 refresh_lock = asyncio.Lock()
@@ -41,7 +42,7 @@ async def refresh_markets():
     if time.time()-last_attempt < 60 or refresh_lock.locked(): return
     async with refresh_lock:
         last_attempt=time.time()
-        tokens=await db.tokens.find({}, {'_id':0}).to_list(1000)
+        tokens=await db.tokens.find(await visible_query(), {'_id':0}).to_list(1000)
         async with httpx.AsyncClient(timeout=18) as c:
             for start in range(0,len(tokens),30):
                 try:
@@ -69,23 +70,24 @@ async def refresh_markets():
 @router.get('/world')
 async def world():
     await refresh_markets()
-    tokens=await db.tokens.find({}, {'_id':0}).to_list(1000)
-    active=await db.bounties.count_documents({'status':'open','ends_at':{'$gt':now().isoformat()}})
+    ids=await registry_ids()
+    tokens=await db.tokens.find(await visible_query(), {'_id':0}).to_list(1000)
+    active=await db.bounties.count_documents({'token_id':{'$in':ids},'status':'open','ends_at':{'$gt':now().isoformat()}})
     return {'tokens':[Token(**t).model_dump() for t in tokens], 'districts':DISTRICTS,
             'stats':{'tokens':len(tokens),'market_cap':sum(t.get('market_cap') or 0 for t in tokens),
-                     'volume_24h':sum(t.get('volume_24h') or 0 for t in tokens),'bounties':active},
+                     'volume_24h':sum(t.get('volume_24h') or 0 for t in tokens),'bounties':active,'nexus_tokens':len(ids),'visual_catalog_tokens':sum(t.get('registry_status')=='visual_catalog' for t in tokens)},
             'network':'mainnet-beta','updated_at':max((t.get('market_updated_at','') for t in tokens),default='')}
 
 @router.get('/tokens/{id}', response_model=Token)
 async def token(id:str):
     await refresh_markets()
-    row=await db.tokens.find_one({'id':id},{'_id':0})
+    row=await db.tokens.find_one({'$and':[{'id':id},await visible_query()]},{'_id':0})
     if not row: raise HTTPException(404,'Token not found')
     return Token(**row)
 
 @router.get('/tokens/{id}/chart')
 async def chart(id:str, period:str=Query('24H',pattern='^(1H|24H|7D|30D)$')):
-    t=await db.tokens.find_one({'id':id},{'_id':0})
+    t=await db.tokens.find_one({'$and':[{'id':id},await visible_query()]},{'_id':0})
     if not t: raise HTTPException(404,'Token not found')
     if not t.get('pair'):
         if t.get('pump_verified'):
@@ -108,5 +110,6 @@ async def chart(id:str, period:str=Query('24H',pattern='^(1H|24H|7D|30D)$')):
 
 @router.get('/activity')
 async def activity(token_id:str|None=None):
-    q={'token_id':token_id} if token_id else {}
+    ids=await registry_ids()
+    q={'token_id':token_id} if token_id in ids else {'token_id':{'$in':[] if token_id else ids}}
     return await db.activity.find(q,{'_id':0}).sort('created_at',-1).to_list(50)

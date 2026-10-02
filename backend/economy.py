@@ -6,6 +6,7 @@ from pymongo.errors import DuplicateKeyError
 from database import db, now
 from auth import current_wallet
 from chain import rpc, ALLOWED_RPC, confirmed_transaction, instructions
+from ecosystem import require_nexus_token,registry_ids
 
 router=APIRouter()
 @router.post('/rpc')
@@ -18,7 +19,7 @@ async def rpc_proxy(request:Request):
 
 @router.post('/launches')
 async def launch(wallet:str=Depends(current_wallet)):
-    raise HTTPException(410,'Independent token minting is disabled. Launch on Pump.fun and register through /api/pump/import.')
+    raise HTTPException(410,'Independent minting and external imports are disabled. Use a NEXUS launch session.')
 
 class Presence(BaseModel):
     description:str=Field(max_length=1000)
@@ -27,6 +28,7 @@ class Presence(BaseModel):
 
 @router.patch('/tokens/{id}/presence')
 async def presence(id:str,body:Presence,wallet:str=Depends(current_wallet)):
+    await require_nexus_token(id)
     result=await db.tokens.update_one({'id':id,'creator':wallet},{'$set':body.model_dump(mode='json')})
     if not result.matched_count: raise HTTPException(403,'Only the token creator can change its presence')
     return {'updated':True}
@@ -46,7 +48,8 @@ class BountyCreate(BaseModel):
 
 @router.get('/bounties')
 async def bounties(token_id:str|None=None):
-    q={'token_id':token_id} if token_id else {}
+    ids=await registry_ids()
+    q={'token_id':token_id} if token_id in ids else {'token_id':{'$in':[] if token_id else ids}}
     rows=await db.bounties.find(q,{'_id':0}).sort('created_at',-1).to_list(200)
     for r in rows:
         if r['status']=='open' and r['ends_at']<now().isoformat(): r['status']='closed'
@@ -55,6 +58,7 @@ async def bounties(token_id:str|None=None):
 
 @router.post('/bounties')
 async def create_bounty(body:BountyCreate,wallet:str=Depends(current_wallet)):
+    await require_nexus_token(body.token_id)
     token=await db.tokens.find_one({'id':body.token_id,'creator':wallet},{'_id':0})
     if not token: raise HTTPException(403,'Only the token creator can publish bounties')
     end=body.ends_at
@@ -74,6 +78,7 @@ class Submission(BaseModel):
 async def submit(id:str,body:Submission,wallet:str=Depends(current_wallet)):
     b=await db.bounties.find_one({'id':id},{'_id':0})
     if not b: raise HTTPException(404,'Bounty not found')
+    await require_nexus_token(b['token_id'])
     if b['status']!='open' or b['ends_at']<=now().isoformat(): raise HTTPException(400,'This bounty is closed')
     if b['creator']==wallet: raise HTTPException(400,'Creators cannot enter their own bounty')
     row={'id':str(uuid.uuid4()),'bounty_id':id,'wallet':wallet, 'content':body.content,'created_at':now().isoformat()}
@@ -84,6 +89,9 @@ async def submit(id:str,body:Submission,wallet:str=Depends(current_wallet)):
 
 @router.get('/bounties/{id}/submissions')
 async def entries(id:str):
+    b=await db.bounties.find_one({'id':id},{'_id':0})
+    if not b:raise HTTPException(404,'Bounty not found')
+    await require_nexus_token(b['token_id'])
     return await db.submissions.find({'bounty_id':id},{'_id':0}).to_list(200)
 
 class Award(BaseModel):
@@ -94,6 +102,7 @@ class Award(BaseModel):
 async def award(id:str,body:Award,wallet:str=Depends(current_wallet)):
     b=await db.bounties.find_one({'id':id,'creator':wallet},{'_id':0})
     if not b: raise HTTPException(403,'Only the creator can distribute this reward')
+    await require_nexus_token(b['token_id'])
     if b['status']=='awarded': raise HTTPException(409,'Reward has already been distributed')
     s=await db.submissions.find_one({'id':body.submission_id,'bounty_id':id},{'_id':0})
     if not s: raise HTTPException(404,'Entry not found')
@@ -107,6 +116,5 @@ async def award(id:str,body:Award,wallet:str=Depends(current_wallet)):
 
 @router.post('/tokens/{id}/community')
 async def community(id:str,body:Submission,wallet:str=Depends(current_wallet)):
-    if not await db.tokens.find_one({'id':id}): raise HTTPException(404,'Token not found')
-    await record(id,wallet,'post',body.content)
-    return {'posted':True}
+    from social_posts import create_post,PostCreate
+    return await create_post(id,PostCreate(text=body.content),wallet)

@@ -1,0 +1,5 @@
+import React from 'react';
+import {Link} from 'react-router-dom';
+import {shortAddress} from '../../lib/api';
+export const ProfileAvatar=({profile,size=36})=>{const id=React.useId().replace(/\W/g,'');return <span className="social-avatar" style={{width:size,height:size}}>{profile?.avatar_url?<img src={profile.avatar_url} alt={profile.display_name || 'Profile'} data-testid={`avatar-${id}`}/>:profile?.display_name?.slice(0,2) || profile?.wallet?.slice(0,2) || 'N'}</span>;};
+export const AuthorLink=({profile,creator=false,testId})=><Link to={`/profile/${profile.wallet}`} data-testid={testId} className="social-author"><strong>{profile.display_name || shortAddress(profile.wallet)}</strong>{creator&&<span className="social-creator-tag">Creator</span>}<small>{profile.handle?`@${profile.handle}`:shortAddress(profile.wallet)}</small></Link>;

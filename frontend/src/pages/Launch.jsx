@@ -1,53 +1,49 @@
-import React, {useEffect, useState} from 'react';
-import {Link, useNavigate} from 'react-router-dom';
-import {ArrowLeft, ArrowUpRight, Check, ShieldCheck, Wallet, LoaderCircle, ExternalLink} from 'lucide-react';
+import React,{useRef,useState,useEffect} from 'react';
+import {Link,useNavigate} from 'react-router-dom';
+import {ArrowLeft,ArrowUpRight,Check,ShieldCheck,LoaderCircle,ImagePlus,RefreshCw} from 'lucide-react';
 import {toast} from 'sonner';
 import {Input} from '../components/ui/input';
-import {ActionButton, TokenAvatar} from '../components/Shared';
+import {Textarea} from '../components/ui/textarea';
+import {ActionButton,ExternalLink} from '../components/Shared';
 import {useWallet} from '../context/WalletContext';
-import {api, errorMessage, colors, districtNames, shortAddress} from '../lib/api';
-const emptyDraft={mint:'', signature:'', district:'meme', color:colors.meme};
-const pumpUrl=process.env.REACT_APP_PUMP_FUN_URL;
+import {api,errorMessage,colors,districtNames} from '../lib/api';
+import {newMintSigner,signNexusLaunch,uploadImage} from '../lib/nexusLaunch';
 
-export default function Launch({reloadWorld}) {
-  const {wallet, connect, authenticate}=useWallet(), navigate=useNavigate();
-  const [form,setForm]=useState(()=>{try{return {...emptyDraft,...JSON.parse(localStorage.getItem('nexus-pump-draft') || '{}')};}catch{return emptyDraft;}});
-  const [verified,setVerified]=useState(null),[busy,setBusy]=useState(false),[step,setStep]=useState(''),[error,setError]=useState('');
-  useEffect(()=>{localStorage.setItem('nexus-pump-draft',JSON.stringify(form));},[form]);
-  useEffect(()=>{setVerified(null);setError('');},[wallet]);
-  const proofField=key=>event=>{setForm({...form,[key]:event.target.value.trim()});setVerified(null);setError('');};
-  const submit=async(event)=>{
-    event.preventDefault();if(!wallet){connect();return;}setBusy(true);setError('');
-    try{
-      await authenticate();
-      if(!verified){setStep('Verifying Pump.fun creation');const {data}=await api.post('/pump/verify',{mint:form.mint,signature:form.signature});setVerified(data);toast.success('Pump.fun creation verified');}
-      else{setStep('Establishing your territory');const {data}=await api.post('/pump/import',form);localStorage.removeItem('nexus-pump-draft');await reloadWorld();toast.success(`${data.symbol} has entered the world`);navigate(`/token/${data.id}`);}
-    }catch(e){setError(errorMessage(e));toast.error(errorMessage(e));}finally{setBusy(false);setStep('');}
-  };
-  return <main className="content-page launch-page" data-testid="launch-page">
-    <div className="page-breadcrumb"><Link to="/" data-testid="launch-back-world"><ArrowLeft size={15}/>Back to world</Link><span>/</span><span>New territory</span></div>
-    <div className="page-title-row"><div><div className="eyebrow">THE NEXT CHAPTER IS YOURS</div><h1 data-testid="launch-heading">Build your place.</h1><p>Launch on Pump.fun. Establish a territory. Bring your people.</p></div><span className="outline-badge" data-testid="launch-provider"><span className="status-dot"/>PUMP.FUN · SOLANA</span></div>
-    <div className="launch-layout"><form className="nexus-form launch-form" onSubmit={submit}>
-      <section><div className="form-section-title"><span>01</span><h2>Launch on Pump.fun</h2></div>
-        <a href={`${pumpUrl}/create`} target="_blank" rel="noopener noreferrer" data-testid="launch-on-pump" className="action-button pump-launch-link"><ExternalLink size={16}/>Open official Pump.fun launcher<ArrowUpRight size={16}/></a>
-        <p className="inline-info" data-testid="pump-launch-handoff">Creation and wallet approval happen on Pump.fun. Return with your token address and its creation transaction.</p>
-        <div className="launch-disclosure" data-testid="pump-fee-policy"><ShieldCheck size={18}/><p>Creator fees remain entirely with Pump.fun's existing mechanism. NEXUS does not redirect, change, or collect them.</p></div>
-      </section>
-      <section><div className="form-section-title"><span>02</span><h2>Verify your token</h2></div>
-        <label>Token address<Input data-testid="pump-mint-input" placeholder="Solana mint address" value={form.mint} onChange={proofField('mint')} minLength={32} maxLength={44} required spellCheck={false} disabled={busy}/></label>
-        <label>Creation transaction signature<Input data-testid="pump-signature-input" placeholder="Original Pump.fun creation transaction" value={form.signature} onChange={proofField('signature')} minLength={64} maxLength={88} required spellCheck={false} disabled={busy}/></label>
-        <div className="inline-info" data-testid="pump-verification-wallet"><Wallet size={14}/>{wallet?`Creator wallet: ${shortAddress(wallet)}`:'Use the same wallet that created the token on Pump.fun.'}</div>
-        {verified&&<div className="pump-verified-identity" data-testid="pump-verified-identity"><TokenAvatar token={{...verified,id:verified.mint,color:form.color}} size={40}/><span><strong data-testid="verified-token-name">{verified.name}</strong><small data-testid="verified-token-symbol">{verified.symbol} · Pump.fun creation verified</small></span><ShieldCheck size={20}/></div>}
-        {error&&<p role="alert" className="pump-form-error" data-testid="pump-verification-error">{error}</p>}
-      </section>
-      <section><div className="form-section-title"><span>03</span><h2>Choose your neighborhood</h2></div>
-        <div className="district-options">{Object.entries(districtNames).map(([id,name])=><button type="button" key={id} data-testid={`launch-district-${id}`} className={form.district===id?'selected':''} style={{'--district-color':colors[id]}} disabled={busy} onClick={()=>setForm({...form,district:id,color:colors[id]})}><span className="district-dot" style={{background:colors[id]}}/>{name}{form.district===id&&<Check size={14}/>}</button>)}</div>
-        <label>Building accent<div className="color-options">{Object.values(colors).map(color=><button type="button" key={color} data-testid={`launch-color-${color.slice(1)}`} disabled={busy} aria-label={`Building color ${color}`} className={form.color===color?'selected':''} style={{background:color}} onClick={()=>setForm({...form,color})}>{form.color===color&&<Check size={14}/>}</button>)}</div></label>
-      </section>
-      <ActionButton data-testid="launch-submit" type="submit" disabled={busy} className="full-width">{busy?<LoaderCircle className="spin" size={17}/>:<ShieldCheck size={17}/>}{busy?step:!wallet?'Connect creator wallet':verified?'Add verified token to the world':'Verify Pump.fun token'}{!busy&&<ArrowUpRight size={17}/>}</ActionButton>
-      <p className="inline-info" data-testid="world-registration-note">World registration signs no transaction and charges no launch fee. It does not create a second token.</p>
-    </form>
-    <aside className="launch-preview"><div className="preview-scene" style={{'--building-color':form.color}}><div className="preview-grid"/><div className="css-building"><div className="building-top"/><div className="building-front">{Array.from({length:24},(_,i)=><span key={i}/>)}</div><div className="building-side"/></div><span className="preview-token" data-testid="launch-preview-symbol">{verified?.symbol || 'YOUR TOKEN'}</span><div className="preview-plot"/></div><div className="preview-details"><span className="eyebrow">YOUR FUTURE ADDRESS</span><h2 data-testid="launch-preview-name">{verified?.name || 'An idea. A building. A beginning.'}</h2><div><span>District</span><strong data-testid="launch-preview-district">{districtNames[form.district]}</strong></div><div><span>Launch infrastructure</span><strong>Pump.fun</strong></div><div><span>World ownership</span><strong>Your creator wallet</strong></div></div><p className="preview-note">A small beginning. An unlimited skyline.</p></aside>
-    </div>
-  </main>;
+export default function Launch({reloadWorld}){
+ const {wallet,provider,connect,authenticate}=useWallet(),navigate=useNavigate();
+ const [form,setForm]=useState({name:'',symbol:'',description:'',district:'meme',color:colors.meme}),[image,setImage]=useState(null),[prepared,setPrepared]=useState(null),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[step,setStep]=useState(''),[accepted,setAccepted]=useState(false),[pending,setPending]=useState(()=>localStorage.getItem('nexus-launch-session'));
+ const signer=useRef(null),fileInput=useRef(null);
+ useEffect(()=>{setPrepared(null);signer.current=null;},[wallet]);
+ const field=key=>e=>{setForm({...form,[key]:e.target.value});setPrepared(null);signer.current=null;};
+ const chooseImage=async e=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);setError('');try{await authenticate();setImage(await uploadImage(file,'token-image'));setPrepared(null);signer.current=null;}catch(e){setError(errorMessage(e));}finally{setUploading(false);e.target.value='';}};
+ const checkStatus=async()=>{
+  await authenticate();const id=pending || prepared?.id;if(!id)return;
+  const {data}=await api.get(`/pump/launches/${id}`);
+  if(data.status==='confirmed'){localStorage.removeItem('nexus-launch-session');setPending(null);await reloadWorld();toast.success(`${data.symbol} is now a NEXUS token`);navigate(`/token/${data.token_id}`);return true;}
+  setStep(data.status==='submitted'?'Waiting for Solana confirmation':data.status);
+  if(['failed','expired'].includes(data.status)){setError(data.error || 'Launch did not confirm');localStorage.removeItem('nexus-launch-session');setPending(null);setPrepared(null);signer.current=null;}
+  if(data.status==='prepared'&&!signer.current){localStorage.removeItem('nexus-launch-session');setPending(null);setPrepared(null);setError('The unsigned launch was not submitted. You can prepare a new launch.');}
+  return false;
+ };
+ const recover=async()=>{setBusy(true);setError('');try{await checkStatus();}catch(e){setError(errorMessage(e));}finally{setBusy(false);}};
+ const submit=async e=>{
+  e.preventDefault();if(!wallet){connect();return;}setBusy(true);setError('');
+  try{await authenticate();if(!image)throw new Error('Upload your token image first');
+   if(!prepared){setStep('Preparing official Pump.fun transaction');signer.current=newMintSigner();const {data}=await api.post('/pump/launches/prepare',{...form,image_id:image.id,mint:signer.current.publicKey.toBase58()},{timeout:90000});setPrepared(data);setStep('Review and approve the launch');}
+   else{setStep('Approve in your wallet');const transaction_base64=await signNexusLaunch(prepared,signer.current,provider);localStorage.setItem('nexus-launch-session',prepared.id);setPending(prepared.id);setStep('Submitting to Solana');const {data}=await api.post(`/pump/launches/${prepared.id}/submit`,{transaction_base64},{timeout:90000});
+    if(data.status==='confirmed'){localStorage.removeItem('nexus-launch-session');setPending(null);await reloadWorld();navigate(`/token/${data.token_id}`);toast.success('Your NEXUS territory is live');}
+    else{setStep('Awaiting confirmation');if(data.error)setError(data.error);}
+   }
+  }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
+ };
+ return <main className="content-page launch-page" data-testid="launch-page"><div className="page-breadcrumb"><Link to="/" data-testid="launch-back-world"><ArrowLeft size={15}/>Back to world</Link><span>/</span><span>New territory</span></div><div className="page-title-row"><div><div className="eyebrow">THE NEXT CHAPTER IS YOURS</div><h1 data-testid="launch-heading">Build your place.</h1><p>Launch through NEXUS. Powered by Pump.fun.</p></div><span className="outline-badge" data-testid="launch-provider"><span className="status-dot"/>NEXUS · PUMP.FUN</span></div>
+ <div className="launch-layout"><form className="nexus-form launch-form" onSubmit={submit}><section><div className="form-section-title"><span>01</span><h2>Token identity</h2></div><div className="form-two-columns"><label>Token name<Input data-testid="launch-name" value={form.name} onChange={field('name')} maxLength={32} required disabled={busy||!!pending} placeholder="Your token's name"/></label><label>Ticker<Input data-testid="launch-symbol" value={form.symbol} onChange={field('symbol')} pattern="[A-Za-z0-9]+" maxLength={13} required disabled={busy||!!pending} placeholder="TOKEN"/></label></div><label>Token image<input ref={fileInput} data-testid="launch-image-file" type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={chooseImage} disabled={busy||uploading||!!pending}/><button data-testid="launch-upload-image" type="button" className="social-upload-button" onClick={()=>{if(!wallet){connect();return;}fileInput.current?.click();}} disabled={uploading||busy||!!pending}>{image?<img src={image.url} alt="Token" data-testid="launch-image-preview"/>:<ImagePlus size={24}/>}<span>{uploading?'Uploading…':image?'Change token image':'Upload token image'}<small>PNG, JPEG, WebP · up to 5 MB</small></span></button></label><label>Description<Textarea data-testid="launch-description" maxLength={1000} value={form.description} onChange={field('description')} disabled={busy||!!pending}/></label></section>
+ <section><div className="form-section-title"><span>02</span><h2>Choose your neighborhood</h2></div><div className="district-options">{Object.entries(districtNames).map(([id,name])=><button type="button" key={id} data-testid={`launch-district-${id}`} className={form.district===id?'selected':''} style={{'--district-color':colors[id]}} disabled={busy||!!pending||!!prepared} onClick={()=>setForm({...form,district:id,color:colors[id]})}><span className="district-dot" style={{background:colors[id]}}/>{name}{form.district===id&&<Check size={14}/>}</button>)}</div><label>Building accent<div className="color-options">{Object.values(colors).map(color=><button type="button" key={color} data-testid={`launch-color-${color.slice(1)}`} disabled={busy||!!pending||!!prepared} aria-label={`Building color ${color}`} className={form.color===color?'selected':''} style={{background:color}} onClick={()=>setForm({...form,color})}>{form.color===color&&<Check size={14}/>}</button>)}</div></label></section>
+ <div className="launch-disclosure" data-testid="pump-fee-policy"><ShieldCheck size={18}/><p>Pump.fun creator fees remain unchanged. This real mainnet launch requires SOL for network fees and account rent. NEXUS registers only its own confirmed launch transaction.</p></div>
+ {prepared&&<div className="pending-launch" data-testid="launch-prepared"><strong>Transaction prepared</strong><small data-testid="launch-prepared-mint">Mint: {prepared.mint}</small><small data-testid="launch-network-fee">Network fee: {prepared.network_fee_lamports==null?'Wallet estimate':`${prepared.network_fee_lamports/1e9} SOL`} · account rent additional</small></div>}
+ <label className="checkbox-label"><input data-testid="launch-acknowledge" type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)} required/><span>I understand this is an irreversible Solana mainnet transaction.</span></label>
+ {error&&<p role="alert" className="pump-form-error" data-testid="launch-error">{error}</p>}
+ {pending?<div className="pending-launch" data-testid="launch-pending"><strong>{step || 'Launch awaiting confirmation'}</strong><ActionButton data-testid="launch-check-status" type="button" disabled={busy} onClick={recover}><RefreshCw size={15}/>Check launch status</ActionButton></div>:<ActionButton data-testid="launch-submit" type="submit" disabled={busy||uploading} className="full-width">{busy?<LoaderCircle size={17} className="spin"/>:<ShieldCheck size={17}/>}{busy?step:!wallet?'Connect wallet':prepared?'Sign & launch on Pump.fun':'Prepare NEXUS launch'}{!busy&&<ArrowUpRight size={16}/>}</ActionButton>}
+ <p className="inline-info" data-testid="nexus-origin-policy">Mint address and launch session are fixed before approval. Tokens created elsewhere cannot be imported.</p>
+ </form><aside className="launch-preview"><div className="preview-scene" style={{'--building-color':form.color}}><div className="preview-grid"/><div className="css-building"><div className="building-top"/><div className="building-front">{Array.from({length:24},(_,i)=><span key={i}/>)}</div><div className="building-side"/></div><span className="preview-token" data-testid="launch-preview-symbol">{form.symbol || 'YOUR TOKEN'}</span><div className="preview-plot"/></div><div className="preview-details"><span className="eyebrow">YOUR FUTURE ADDRESS</span><h2 data-testid="launch-preview-name">{form.name || 'An idea. A building. A beginning.'}</h2><div><span>District</span><strong data-testid="launch-preview-district">{districtNames[form.district]}</strong></div><div><span>Launch infrastructure</span><strong>Pump.fun</strong></div><div><span>Community</span><strong>Created after confirmation</strong></div></div><p className="preview-note">A small beginning. An unlimited skyline.</p></aside></div></main>;
 }

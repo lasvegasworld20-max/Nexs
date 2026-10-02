@@ -13,7 +13,7 @@ const initial={token_id:'',name:'',reward:'',objective:'',rules:'',eligibility:'
 export default function Bounties({tokens}){
  const [params]=useSearchParams(),{wallet,provider,connect,authenticate}=useWallet();
  const [bounties,setBounties]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[filter,setFilter]=useState('all'),[open,setOpen]=useState(false),[form,setForm]=useState(initial),[busy,setBusy]=useState(false),[selected,setSelected]=useState(null),[entries,setEntries]=useState([]),[content,setContent]=useState('');
- const owned=tokens.filter(t=>t.creator===wallet&&wallet);
+ const owned=tokens.filter(t=>t.nexus_launched&&t.creator===wallet&&wallet);
  const load=async()=>{try{const r=await api.get('/bounties');setBounties(r.data);setError('');return r.data;}catch(e){setError(errorMessage(e));return [];}finally{setLoading(false);}};
  useEffect(()=>{load().then(data=>{if(params.get('bounty'))setSelected(data.find(b=>b.id===params.get('bounty')) || null);});if(params.get('create')){setForm({...initial,token_id:params.get('create')});setOpen(true);}},[params]);
  useEffect(()=>{setContent('');setEntries([]);if(selected)api.get(`/bounties/${selected.id}/submissions`).then(r=>setEntries(r.data)).catch(()=>{});},[selected]);

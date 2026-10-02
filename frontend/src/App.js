@@ -9,8 +9,11 @@ import TokenDashboard from './pages/TokenDashboard';
 import Launch from './pages/Launch';
 import Bounties from './pages/Bounties';
 import Leaderboard from './pages/Leaderboard';
+import Community from './pages/Community';
+import Profile from './pages/Profile';
 import './App.css';
 import './pump.css';
+import './social.css';
 function App(){
  const [world,setWorld]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(false);
  const reload=useCallback(async()=>{try{const {data}=await api.get('/world');setWorld(data);setError(false);}catch{setError(true);}finally{setLoading(false);}},[]);
@@ -21,6 +24,9 @@ function App(){
  <Route path="/launch" element={<Launch reloadWorld={reload}/>}/>
  <Route path="/bounties" element={<Bounties tokens={world?.tokens || []}/>}/>
  <Route path="/leaderboard" element={<Leaderboard world={world} loading={loading}/>}/>
+ <Route path="/community/:id" element={<Community/>}/>
+ <Route path="/community/:id/post/:postId" element={<Community/>}/>
+ <Route path="/profile/:wallet" element={<Profile/>}/>
  <Route path="*" element={<div className="not-found" data-testid="not-found"><h1>Uncharted territory.</h1><Link to="/" data-testid="return-world-404">Return to the world →</Link></div>}/>
  </Routes><Toaster theme="dark" position="bottom-center" richColors/></WalletProvider></BrowserRouter>;
 }
