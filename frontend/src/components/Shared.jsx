@@ -1,0 +1,10 @@
+import React from 'react';
+import {Button} from './ui/button';
+import {LoaderCircle,ArrowUpRight} from 'lucide-react';
+export const ActionButton=({children,className='',...props})=><Button className={`action-button ${className}`} {...props}>{children}</Button>;
+export const IconButton=({icon:Icon,label,className='',...props})=><button className={`icon-button ${className}`} aria-label={label} title={label} {...props}><Icon size={18}/></button>;
+export const TokenAvatar=({token,size=36})=>{const id=React.useId().replace(/[^a-zA-Z0-9]/g,'');return <span className="token-avatar" style={{width:size,height:size,background:`${token.color || '#b6f36e'}20`,color:token.color || '#b6f36e'}}>{token.image?<img data-testid={`token-image-${token.id}-${id}`} src={token.image} alt={token.name} onError={e=>{e.currentTarget.style.display='none';e.currentTarget.parentElement.setAttribute('data-fallback',token.symbol?.slice(0,2));}}/>:token.symbol?.slice(0,2)}</span>;};
+export const Change=({value,testId})=><span data-testid={testId} className={`change ${value==null?'muted':value>=0?'positive':'negative'}`}>{value==null?'—':`${value>=0?'+':''}${Number(value).toFixed(2)}%`}</span>;
+export const Loading=({text='Loading city data…'})=><div className="loading-state" data-testid="loading-state"><LoaderCircle className="spin" size={24}/><span>{text}</span></div>;
+export const Empty=({icon:Icon,title,text,children,testId='empty-state'})=><div className="empty-state" data-testid={testId}>{Icon&&<Icon size={28}/>}<strong>{title}</strong>{text&&<p>{text}</p>}{children}</div>;
+export const ExternalLink=({href,children,testId})=><a data-testid={testId} href={href} target="_blank" rel="noreferrer" className="external-link">{children}<ArrowUpRight size={14}/></a>;

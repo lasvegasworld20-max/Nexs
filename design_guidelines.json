@@ -1,0 +1,93 @@
+{
+  "project_name": "CryptoCity Launchpad",
+  "app_type": "3d_experience_hybrid_fullstack",
+  "concept": "Living Open-World Crypto Launchpad (Ingress x GitCity Inspiration)",
+  "context_strategy": {
+    "primary_mode": "Top-down 3D explorable crypto city map where every launched token is a building and market cap dictates building height.",
+    "emotional_tone": "Tactical Cyberpunk Command, Financial Sovereignty, Living Market Ecosystem",
+    "design_archetype": "ELECTRIC_CYBER_TACTICAL (Archetype 7 mixed with Archetype 4)",
+    "no_demo_policy": "STRICT REQUIREMENT: Absolutely no 'demo', 'simulate', 'mock', or 'testnet placeholder' labels in the visual interface. All UI components must read like a polished, live production app on Solana."
+  },
+  "typography": {
+    "headline_font": "Unbounded, sans-serif",
+    "body_font": "Inter, sans-serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "google_fonts_url": "https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap",
+    "hierarchy": {
+      "h1_hero": "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight font-display uppercase",
+      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight font-display",
+      "h3_subsection": "text-xl sm:text-2xl font-semibold tracking-normal font-display",
+      "h4_card_widget": "text-lg sm:text-xl font-medium tracking-wide",
+      "body": "text-base font-normal leading-relaxed font-body",
+      "small_label": "text-xs uppercase tracking-[0.2em] font-mono text-cyan-400/80"
+    }
+  },
+  "colors": {
+    "mode": "dark",
+    "background_base": "#060810",
+    "surface_cards": "#0D111D",
+    "surface_glass": "rgba(13, 17, 29, 0.75)",
+    "primary_brand": "#14F195",
+    "solana_purple": "#9945FF",
+    "cyan_electric": "#00F0FF",
+    "warning_amber": "#FFB800",
+    "alert_crimson": "#FF2A6D",
+    "text_primary": "#F1F5F9",
+    "text_muted": "#94A3B8",
+    "borders_subtle": "rgba(255, 255, 255, 0.1)",
+    "borders_active": "rgba(0, 240, 255, 0.4)",
+    "glow_cyan": "drop-shadow(0 0 12px rgba(0, 240, 255, 0.5))",
+    "glow_green": "drop-shadow(0 0 12px rgba(20, 241, 149, 0.5))",
+    "district_colors": {
+      "solana_core": "#9945FF",
+      "meme_district": "#FF2A6D",
+      "defi_citadel": "#14F195",
+      "ai_cyber_hub": "#00F0FF",
+      "gaming_realm": "#FFB800"
+    }
+  },
+  "layout_and_structure": {
+    "viewport_hero": "FULL-SCREEN 3D CITY CANVAS (`/` opens directly into 3D world map)",
+    "hud_overlay_strategy": "Fixed glassmorphism top header (`z-40`), right/left tactical collapsible panels (`z-30`), and floating mini-map controls (`z-30`)",
+    "spacing_scale": "p-2, p-4, p-6, p-8, p-12, p-16",
+    "bento_grid_mode": "MODE B: High Density Tactical Dashboard for Token Info & Trading"
+  },
+  "3d_city_engine_spec": {
+    "tech_stack": "HTML5 Canvas 2.5D / Three.js / React Three Fiber / WebGL fallback",
+    "camera": "Top-down Orthographic/Perspective view with zoom (Scroll/Pinch) and pan (Drag)",
+    "building_height_formula": "Height = Math.max(12, Math.min(280, Math.log10(marketCap) * 35))",
+    "building_visuals": {
+      "$100K-$1M": "Low-rise tactical block (12px - 40px height), soft pulse, cyan accent window lights",
+      "$1M-$10M": "Mid-rise corporate tower (40px - 110px height), neon logo billboard top, purple edge glow",
+      "$10M-$100M+": "Dominant Megastructure Skyscraper (110px - 280px height), glowing holographic emitter spire, animated pulse light strips"
+    },
+    "territories": "Ingress-like polygonal territory bounds with glowing animated boundary lines and team crest banners",
+    "click_interaction": "Clicking a building smoothly zooms camera to building roof and opens the Token Dashboard view with full trade modal"
+  },
+  "key_features_and_flows": {
+    "full_screen_3d_city": "Interactive city grid showing all launched tokens as living 3D structures. Allows filtering by district, market cap, volume, and new launches.",
+    "token_dashboard": "Triggered on building click. Features TradingView-style price chart, Solana Buy/Sell swap widget, holder list, market stats, live activity feed, and bounties.",
+    "creator_custom_bounties": "Token creators issue custom bounties (e.g. 'Meme Campaign', 'Volume Milestone', 'Content Quest') tied to their city territory with SOL / Token rewards.",
+    "token_launchpad_wizard": "Form modal within the city allowing creators to enter Token Name, Ticker, Symbol Image, Initial Supply, and District Location to spawn a brand new building in real-time.",
+    "solana_wallet_integration": "Interactive wallet connect button (Phantom, Solflare, Backpack) showing real wallet balances, SOL trading capability, and transaction notifications via Sonner."
+  },
+  "visual_enhancers": {
+    "textures": "Subtle Cyber Grid overlay, noise grain, holographic sweep animations, scanlines for HUD metrics",
+    "borders": "1px crisp neon borders with `backdrop-blur-md bg-slate-900/80`",
+    "buttons": "Pill-shaped or chamfered cyber buttons with neon hover rings and active press animations",
+    "toasts": "Sonner toasts with green/cyan cyber theme (`bg-slate-900 text-slate-100 border-cyan-500/40`)"
+  },
+  "accessibility_and_testing": {
+    "data_testid_rule": "ALL interactive elements (buttons, inputs, tabs, map controls, building triggers, trade forms) MUST include distinct data-testid attributes in kebab-case (e.g. data-testid='solana-wallet-connect-btn', data-testid='token-building-bonk', data-testid='buy-token-btn').",
+    "contrast": "Ensure APCA readable high-contrast text overlay over dark city map visuals",
+    "javascript_file_convention": "Standard JavaScript React (.js / .jsx) components"
+  },
+  "instructions_to_main_agent": [
+    "1. Render the main page directly as an explorable 3D / 2.5D top-down city canvas with zoom, pan, district territories, and click-to-view building interactions.",
+    "2. Ensure building heights dynamically recalculate according to market cap values.",
+    "3. On building selection, display the Token Dashboard modal/view with live charts, buy/sell swap, bounties, and holder analytics.",
+    "4. Implement real Solana wallet status with wallet selection popup (Phantom / Solflare), simulated live balances, and transaction execution flow without using any 'demo' or 'simulate' labels.",
+    "5. Enable creator token launching which immediately adds a new 3D building into the city grid in the chosen district.",
+    "6. Apply data-testid to every interactive component across the app."
+  ]
+}
