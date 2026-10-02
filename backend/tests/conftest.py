@@ -131,8 +131,9 @@ def test_data_setup_and_cleanup(mongo_db, creator_identity, test_token_id, test_
     mongo_db.activity.delete_many({"token_id": test_token_id})
     mongo_db.tokens.delete_many({"id": test_token_id})
 
-    mongo_db.tokens.insert_one(
-        {
+    mongo_db.tokens.update_one(
+        {"id": test_token_id},
+        {"$setOnInsert": {
             "id": test_token_id,
             "name": "TEST Automation Token",
             "symbol": "TESTAUTO",
@@ -152,12 +153,14 @@ def test_data_setup_and_cleanup(mongo_db, creator_identity, test_token_id, test_
             "source": "TEST",
             "listed_at": datetime.now(timezone.utc).isoformat(),
             "description": "Owned test token",
-        }
+        }},
+        upsert=True,
     )
 
     end = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
-    mongo_db.bounties.insert_one(
-        {
+    mongo_db.bounties.update_one(
+        {"id": test_bounty_id},
+        {"$setOnInsert": {
             "id": test_bounty_id,
             "token_id": test_token_id,
             "name": "TEST Bounty",
@@ -174,7 +177,8 @@ def test_data_setup_and_cleanup(mongo_db, creator_identity, test_token_id, test_
             "funding": "creator-managed",
             "created_at": datetime.now(timezone.utc).isoformat(),
             "ends_at": end,
-        }
+        }},
+        upsert=True,
     )
 
     yield

@@ -43,8 +43,8 @@ Design: Crypto + Open World + City + Game, not crypto dashboard + map background
 - Non-custodial Phantom/Solflare injected wallet integration. Ed25519, origin-bound, one-use, 5-minute challenges. Hashed random bearer sessions expire after 12 hours. No seed/private keys persisted.
 - Solana mainnet RPC proxied through `/api/rpc` using a method allowlist. Protected `MONGO_URL` and `REACT_APP_BACKEND_URL` preserved. Service URLs stored in environment.
 - Official keyless Jupiter Plugin integrated on token dashboard, actual SOL/token swap routing, explicit buy/sell defaults, official external Jupiter deep link fallback. Plugin handles its own wallet connection. POSIX locale normalization avoids Intl crash in embedded browsers.
-- Actual SPL mint transaction built client-side: mint, initialize 6 decimals, associated account, mint fixed supply, revoke mint authority; no freeze authority. User signs and pays rent/fees. Backend checks confirmed tx, signer, initMint authority and token program before registration. Pending tx persisted locally for retry without paying again.
-- Token name, description, image and color are NEXUS identity metadata (not Metaplex on-chain metadata). Launch does not automatically create a pool/liquidity; UI clearly discloses this.
+- **Superseded by the Pump.fun integration below:** the initial independent SPL mint flow is removed. No client-side independent token creation remains; authenticated `/api/launches` now returns 410.
+- Pump token name/symbol/metadata URI come from independently verified Pump creation instructions/events. Off-chain image/description are read from the referenced metadata, subject to safe URL and payload bounds. NEXUS only controls its world representation.
 - Bounties: creator-only creation; custom text conditions/eligibility/distribution; SOL reward, deadline. Entries are wallet-authenticated, one per wallet; owner cannot self-enter. Winner payout requires a real wallet-signed SOL transfer and backend verifies source/destination/amount before award. Rewards creator-managed, not escrow; UI explicitly states this. Pending payout signature stored for safe retry.
 
 ## Implemented — 2026-10-02
@@ -73,14 +73,14 @@ Design: Crypto + Open World + City + Game, not crypto dashboard + map background
 ## Known limitations and prioritized backlog
 
 ### P0 — Before accepting public real-money use
-- User-authorized end-to-end funded wallet validation for actual mint, Jupiter swap and reward payout. Existing tests validate authentication, rendering and rejected operations, not successful funded transactions.
+- User-authorized launch on official Pump.fun, then creator-authenticated verify/import in the browser. Read-only verification of a real successful Pump mainnet creation has passed; no launch/trade funds were spent. Non-Pump legacy catalog swaps and bounty payout remain wallet-approved external financial flows.
 - Dedicated production-grade Solana RPC configuration. Current public mainnet RPC is functional but rate-limited and unsuitable for sustained heavy traffic.
 - Transaction lifecycle hardening: recovery for rejected/dropped/expired transactions, deeper adversarial on-chain validation, concurrency control around payout finalization, API anti-abuse limits.
 - Formal security audit before public financial usage (not performed; no audit was requested).
 
 ### P1 — Complete market/launch ecosystem
-- On-chain token metadata and durable image/metadata uploads.
-- In-app DEX liquidity-pool creation. Currently SPL minting is real but a pool must exist separately for trade routing.
+- Optional direct official Pump SDK launch only with a verified supported metadata-publication pipeline and current pinned instruction compatibility. Never reintroduce independent SPL minting or alter Pump fee fields.
+- Liquidity, bonding curve, graduation and creator fees remain Pump infrastructure, not an independently implemented NEXUS subsystem.
 - Holder analytics/indexer integration. Current upstream does not provide holder totals; UI says Not available.
 - Confirmed on-chain trade history/indexer; existing history covers world launches, bounties, community milestones.
 - Multi-winner reward distribution and/or audited escrow. Current supported payout is one winner receiving the stated SOL reward.
@@ -96,3 +96,42 @@ Design: Crypto + Open World + City + Game, not crypto dashboard + map background
 ## Next suggested product enhancement
 
 Shareable territory URLs with token/camera focus and a community invite would make each token's location easy to circulate.
+
+## Pump.fun integration layer — 2026-10-02
+
+### User request and explicit choice
+
+Preserve the existing website, concept, map, buildings, territory system and visual direction. Add only the real Pump.fun integration layer. Pump.fun owns token launches and underlying trading infrastructure; NEXUS owns the visual/game/community layer. Do not create independent tokens, fake launches/trades, or a separate creator-fee system. Do not replace, redirect, recreate or modify Pump.fun creator fees.
+
+Creator loop: Launch Token → Pump.fun → Token Appears in World → Building Created → Height Follows MC → Create Bounty. User loop: Explore → Building → Dashboard → Buy/Sell → Bounty. Use real token address/name/symbol/image/cap/price/volume/holders/activity where available, plus Pump.fun link, chart and community.
+
+Explicit choice: **“Utamakan SDK/API resmi; jika tidak tersedia, gunakan halaman resmi Pump.fun lalu verifikasi token untuk memasukkannya ke dunia.”** No third-party transaction provider authorized.
+
+### Delivered architecture
+
+- Official SDK/IDL researched. Current Pump creation supports evolving Token-2022/mayhem/cashback/holder-reward/fee options; direct hosted metadata publication was not established as a supported public end-to-end API. Implemented the authorized official-page handoff, not a private frontend endpoint or third-party transaction service. Direct SDK transaction launch is not enabled.
+- `/launch` retains prior style and building preview, replacing standalone mint form with official `https://pump.fun/create` link, mint + original creation signature fields, creator wallet, verification, existing district/color picker, then registration. Draft persists across visiting Pump.fun. Opening Pump.fun is not counted as a successful launch; no automatic callback is claimed.
+- Removed frontend `createToken`, Keypair mint generation, initializeMint/mintTo/revoke mint instruction assembly. Retained independent SOL transfer solely for community bounty rewards, unrelated to creator fees.
+- New authenticated `/api/pump/verify` and `/api/pump/import`, plus public `/api/pump/config`. Client cannot submit authoritative name/symbol/creator/verified fields. Import adds or claims one persistent token representation; an existing catalog location/district/color is preserved.
+- Verification modules pin official `pump-fun/pump-public-docs` IDL commit `e0687ae9b7e064a0f54efc7297c65eecfbba3a8f`. Supports official create/create_v2 compatible prefixes with bounded Borsh readers. Checks confirmed successful transaction, exact program/discriminator/mint, create-user account equals authenticated signer, mint authority/curve/ATA/global/metadata-or-mayhem/event/program PDAs, successful runtime-attributed CreateEvent and matching fields, mint owner/initialized flag/decimals and Pump-owned curve.
+- Runtime event stack ignores foreign nested Program data and failed invocation subtrees. Creator world ownership is original signed creation user; Pump's creator/fee destination is read-only and never changed, including supported fee-beneficiary variations.
+- Metadata: allowlisted HTTPS/IPFS hosts, 256KiB streaming limit, timeout, no redirects. Unknown metadata URLs safely yield unavailable image/description; token identity remains on-chain name/symbol.
+- Periodic world refresh is still request-driven/polled, no scheduler. Adds read-only batched curve/mint checks. Pump provenance is from the actual PDA owner/discriminator, never a `pump` suffix.
+- Active native-SOL curves use real reserves + mint supply/decimals and sourced SOL/USD to display a clearly labeled reserve-derived price/cap. Graduated curves do not determine current market price; DEX data is used and obsolete curve quotes are cleared if no graduated market quote is available. MC still feeds the existing unmodified tower-height renderer.
+- Recent observed USD curve quotes stored as snapshots for chart fallback; not reconstructed historical candles. Up to 7 days retained, max 1000 returned. Existing GeckoTerminal charts remain.
+- Pump-proven tokens route to a new panel in the existing dashboard slot. Buy/Sell links open exact official `/coin/{mint}` page; UI explicitly tells user to select Buy/Sell there. No invented side deep-link or execution claim. Existing non-Pump catalog entries retain functioning Jupiter swaps.
+- Pump token dashboard adds provenance, Pump link, source/method text, official chart/activity link and Trades tab. Activity endpoint decodes confirmed Pump TradeEvent logs from bounded last-eight curve transactions; explicitly not a comprehensive 24-hour feed or PumpSwap indexer.
+- Holders remain `Not available` because existing public sources do not provide a reliable indexed total; never estimate/fabricate it. Graduated PumpSwap trades can be viewed on the official Pump token page; native bounded event decoding only covers Pump bonding-curve activity.
+- Existing creator bounty, submission, community and presence authorization continue to use the verified creator wallet. No fee collection/claiming/sharing/redirection functions added.
+
+### Preservation and verification evidence
+
+- `git diff --exit-code -- frontend/src/world/ frontend/src/pages/World.jsx frontend/src/App.css backend/catalog.py` passed: these existing visual/map/territory files unchanged.
+- World remained 16 original tokens and the same four territory coordinates; no test/public-example tokens retained.
+- Successful **read-only real-mainnet creation verification**: mint `2mh3b9fhXhkjqNrUjNqSbR1czsy6sz4Xh3WJkKYvpump`, original creation signature `4T9picqmw7jgntdFJYFGvN3woMqCAcWVM7eF5Zv3bARYjhvCoVXQwyaUjB9DoZTWWPvsguUcQguLVDrC2iXiXB9A`, public creator `JNpVNLrY5b1wkHBx6grNmHge6Zi8K5uqAbZGFBxLSmv`. Token was not imported into the world and no wallet authority/private key was available or invented.
+- `/app/test_reports/iteration_2.json`: 34/34 pytest tests passed, zero skipped/failed, frontend desktop/mobile validated. Tests cover auth, malformed/spoofed fields, wrong-wallet rejection on a real Pump creation, mismatched mint/signature, deprecated independent launch410, provenance, activity scope, previous community/bounty behavior. Legacy launch test expectation updated intentionally. Full positive wallet-authorized browser import not executed; no real-user wallet provided.
+- Screenshots verified unchanged world, updated launch page with exact official URL, and FARTCOIN Pump panel/Buy-Sell external handoff. FARTCOIN's provenance is verified from actual program-owned graduated curve; other catalog tokens are not falsely labeled Pump.
+
+### Next priorities
+
+P0: creator-authorized browser verify→import validation with an actual owned Pump launch; dedicated RPC/anti-abuse/concurrency hardening before heavy public traffic. P1: reliable holder indexer, fuller confirmed trading history, safe additional metadata hosts if needed, optional supported official SDK metadata+launch. P2: shareable territory links. Do not build an independent mint, liquidity or creator-fee system.

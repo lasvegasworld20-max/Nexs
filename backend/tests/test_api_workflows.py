@@ -113,7 +113,7 @@ def test_launch_rejects_unconfirmed_or_invalid_transaction(api_client, base_url,
         "image": None,
     }
     response = api_client.post(f"{base_url}/api/launches", json=payload, headers=creator_auth_headers)
-    assert response.status_code in [400, 403, 409]
+    assert response.status_code == 410
     assert "detail" in response.json()
 
 

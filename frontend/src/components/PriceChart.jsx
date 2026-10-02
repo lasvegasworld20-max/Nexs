@@ -8,6 +8,7 @@ export const PriceChart = ({token}) => {
   const [period, setPeriod] = useState('24H');
   const [candles, setCandles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [source, setSource] = useState('GeckoTerminal');
   const [size, setSize] = useState({width: 0, height: 0});
   const container = useRef(null);
 
@@ -30,7 +31,7 @@ export const PriceChart = ({token}) => {
     setLoading(true);
     setCandles([]);
     api.get(`/tokens/${token.id}/chart`, {params: {period}})
-      .then(response => { if (active) setCandles(response.data.candles); })
+      .then(response => { if (active) { setCandles(response.data.candles); setSource(response.data.source || 'Market data'); } })
       .catch(() => {})
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -59,6 +60,6 @@ export const PriceChart = ({token}) => {
         </AreaChart>
       ) : <Empty icon={ChartNoAxesCombined} title="Price history unavailable" text="Historical candles haven't been returned by the market data provider." testId="chart-unavailable"/>}
     </div>
-    <div className="chart-source" data-testid="chart-source">GeckoTerminal <span>USD · {period}</span></div>
+    <div className="chart-source" data-testid="chart-source">{source} <span>USD · {period}</span></div>
   </section>;
 };

@@ -6,6 +6,8 @@ from database import db, client
 from markets import router as markets_router, seed_world
 from auth import router as auth_router
 from economy import router as economy_router
+from pump_routes import router as pump_router
+from pump_activity import router as pump_activity_router
 
 @asynccontextmanager
 async def lifespan(app):
@@ -14,6 +16,8 @@ async def lifespan(app):
     await db.challenges.create_index('expires_at', expireAfterSeconds=0)
     await db.bounties.create_index('id', unique=True)
     await db.submissions.create_index([('bounty_id', 1), ('wallet', 1)], unique=True)
+    await db.market_snapshots.create_index([('mint',1),('time',1)],unique=True)
+    await db.market_snapshots.create_index('expires_at',expireAfterSeconds=0)
     await seed_world()
     yield
     client.close()
@@ -24,6 +28,8 @@ app.add_middleware(CORSMiddleware, allow_origins=[os.environ['APP_ORIGIN']], all
 app.include_router(markets_router, prefix='/api')
 app.include_router(auth_router, prefix='/api')
 app.include_router(economy_router, prefix='/api')
+app.include_router(pump_router, prefix='/api')
+app.include_router(pump_activity_router, prefix='/api')
 
 @app.get('/api/')
 async def health():

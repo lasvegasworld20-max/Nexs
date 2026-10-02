@@ -10,6 +10,7 @@ import Launch from './pages/Launch';
 import Bounties from './pages/Bounties';
 import Leaderboard from './pages/Leaderboard';
 import './App.css';
+import './pump.css';
 function App(){
  const [world,setWorld]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(false);
  const reload=useCallback(async()=>{try{const {data}=await api.get('/world');setWorld(data);setError(false);}catch{setError(true);}finally{setLoading(false);}},[]);

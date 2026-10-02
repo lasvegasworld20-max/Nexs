@@ -41,7 +41,7 @@ async def refresh_markets():
     if time.time()-last_attempt < 60 or refresh_lock.locked(): return
     async with refresh_lock:
         last_attempt=time.time()
-        tokens=await db.tokens.find({}, {'_id':0,'mint':1}).to_list(1000)
+        tokens=await db.tokens.find({}, {'_id':0}).to_list(1000)
         async with httpx.AsyncClient(timeout=18) as c:
             for start in range(0,len(tokens),30):
                 try:
@@ -57,11 +57,14 @@ async def refresh_markets():
                               'volume_24h':p.get('volume',{}).get('h24'), 'liquidity':p.get('liquidity',{}).get('usd'),
                               'pair':p.get('pairAddress'), 'market_updated_at':now().isoformat(),
                               'buys_24h':p.get('txns',{}).get('h24',{}).get('buys'),
-                              'sells_24h':p.get('txns',{}).get('h24',{}).get('sells')}
+                              'sells_24h':p.get('txns',{}).get('h24',{}).get('sells'),
+                              'market_source':'DEX Screener','price_method':'market-price'}
                         if p.get('info',{}).get('imageUrl'): data['image']=p['info']['imageUrl']
                         await db.tokens.update_one({'mint':token['mint']},{'$set':data})
                 except (httpx.HTTPError, ValueError, TypeError):
                     pass  # Keep the last real snapshot and expose its timestamp, never invent prices.
+        from pump_market import refresh_pump_state
+        await refresh_pump_state(tokens)
 
 @router.get('/world')
 async def world():
@@ -84,7 +87,11 @@ async def token(id:str):
 async def chart(id:str, period:str=Query('24H',pattern='^(1H|24H|7D|30D)$')):
     t=await db.tokens.find_one({'id':id},{'_id':0})
     if not t: raise HTTPException(404,'Token not found')
-    if not t.get('pair'): return {'candles':[], 'available':False, 'source':'GeckoTerminal'}
+    if not t.get('pair'):
+        if t.get('pump_verified'):
+            from pump_market import observed_chart
+            return await observed_chart(t,period)
+        return {'candles':[], 'available':False, 'source':'GeckoTerminal'}
     key=f'{id}:{period}'
     if key in chart_cache and time.time()-chart_cache[key][0]<120: return chart_cache[key][1]
     unit,agg,limit={'1H':('minute',1,60),'24H':('hour',1,24),'7D':('hour',4,42),'30D':('day',1,30)}[period]

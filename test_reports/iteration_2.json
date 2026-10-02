@@ -1,0 +1,42 @@
+{
+  "summary": "Executed backend+frontend regression focused on Pump.fun integration layer, launch deprecation behavior, Pump verification guards, world preservation signals, and Pump/Jupiter dashboard routing. Full backend pytest suite passed with updated /api/launches expectation and added Pump security tests.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_api_workflows.py",
+    "/app/backend/tests/test_pump_integration_security.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional final manual wallet-connected smoke test: Launch verify/import happy-path with a real creator wallet in browser extension.",
+    "Keep pytest invocation at -n 0 or retain idempotent fixture upserts to avoid xdist duplicate fixture collisions."
+  ],
+  "critical_code_review_comments": [
+    "No fee-construction or fee-redirection code observed; Pump fee ownership remains delegated to Pump.fun.",
+    "Pump provenance is validated by on-chain/program checks in verifier+market layers, not mint suffix heuristics.",
+    "Legacy independent launch route is intentionally disabled and now correctly returns 410 for authenticated callers."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_api_workflows.py",
+    "/app/backend/tests/test_pump_integration_security.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/iteration_2.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "Pytest fixtures create temporary TEST_* token/bounty/submission data and teardown cleanup. Post-run verification: /api/world tokens=16, /api/bounties=0.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend: 34/34 tests pass (including new Pump security/auth/provenance checks). Frontend automation validated world render, launch UI contract, FARTCOIN Pump panel/link/toggle/trades scope, JUP Jupiter panel, and mobile overflow checks (390px) with no horizontal overflow.",
+  "rca of the issue": "Testing infra issue found and fixed: session autouse fixture in conftest used insert_one, causing DuplicateKeyError under pytest-xdist multi-worker setup. Mitigation applied: switched to idempotent upsert ($setOnInsert) for test token and bounty fixtures."
+}
